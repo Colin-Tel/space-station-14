@@ -48,7 +48,8 @@ namespace Content.Client.Verbs.UI
                 var spriteView = new SpriteView()
                 {
                     OverrideDirection = Direction.South,
-                    Sprite = entManager.GetComponentOrNull<ISpriteComponent>(verb.IconEntity.Value)
+                    SetSize = (ElementHeight, ElementHeight),
+                    Sprite = entManager.GetComponentOrNull<SpriteComponent>(verb.IconEntity.Value)
                 };
 
                 Icon.AddChild(spriteView);

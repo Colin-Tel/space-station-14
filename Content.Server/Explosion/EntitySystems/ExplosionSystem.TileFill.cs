@@ -44,11 +44,11 @@ public sealed partial class ExplosionSystem : EntitySystem
         var (localGrids, referenceGrid, maxDistance) = GetLocalGrids(epicenter, totalIntensity, slope, maxIntensity);
 
         // get the epicenter tile indices
-        if (_mapManager.TryFindGridAt(epicenter, out var candidateGrid) &&
+        if (_mapManager.TryFindGridAt(epicenter, out var gridUid, out var candidateGrid) &&
             candidateGrid.TryGetTileRef(candidateGrid.WorldToTile(epicenter.Position), out var tileRef) &&
             !tileRef.Tile.IsEmpty)
         {
-            epicentreGrid = candidateGrid.Owner;
+            epicentreGrid = gridUid;
             initialTile = tileRef.GridIndices;
         }
         else if (referenceGrid != null)
@@ -153,7 +153,7 @@ public sealed partial class ExplosionSystem : EntitySystem
                 if (tilesInIteration[i] * intensityIncrease >= remainingIntensity)
                 {
                     // there is not enough intensity left to distribute. add a fractional amount and break.
-                    iterationIntensity[i] += (float) remainingIntensity / tilesInIteration[i];
+                    iterationIntensity[i] += remainingIntensity / tilesInIteration[i];
                     remainingIntensity = 0;
                     break;
                 }
@@ -219,7 +219,7 @@ public sealed partial class ExplosionSystem : EntitySystem
             tilesInIteration.Add(newTileCount);
             if (newTileCount * stepSize >= remainingIntensity)
             {
-                iterationIntensity.Add((float) remainingIntensity / newTileCount);
+                iterationIntensity.Add(remainingIntensity / newTileCount);
                 break;
             }
 

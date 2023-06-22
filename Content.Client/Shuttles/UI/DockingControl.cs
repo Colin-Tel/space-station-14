@@ -1,3 +1,4 @@
+using Content.Client.UserInterface.Controls;
 using Content.Shared.Shuttles.BUIStates;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
@@ -16,15 +17,13 @@ public class DockingControl : Control
     private readonly IEntityManager _entManager;
     private readonly IMapManager _mapManager;
 
-    private const int MinimapMargin = 4;
-
     private float _range = 8f;
     private float _rangeSquared = 0f;
     private const float GridLinesDistance = 32f;
 
     private int MidPoint => SizeFull / 2;
-    private int SizeFull => (int) ((RadarControl.MinimapRadius + MinimapMargin) * 2 * UIScale);
-    private int ScaledMinimapRadius => (int) (RadarControl.MinimapRadius * UIScale);
+    private int SizeFull => (int) (MapGridControl.UIDisplayRadius * 2 * UIScale);
+    private int ScaledMinimapRadius => (int) (MapGridControl.UIDisplayRadius * UIScale);
     private float MinimapScale => _range != 0 ? ScaledMinimapRadius / _range : 0f;
 
     public EntityUid? ViewedDock;

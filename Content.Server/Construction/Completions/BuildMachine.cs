@@ -1,6 +1,7 @@
 using System.Linq;
 using Content.Server.Construction.Components;
 using Content.Shared.Construction;
+using Content.Shared.Construction.Components;
 using JetBrains.Annotations;
 using Robust.Server.Containers;
 using Robust.Shared.Containers;
@@ -11,6 +12,7 @@ namespace Content.Server.Construction.Completions
     [DataDefinition]
     public sealed class BuildMachine : IGraphAction
     {
+        // TODO use or generalize ConstructionSystem.ChangeEntity();
         public void PerformAction(EntityUid uid, EntityUid? userUid, IEntityManager entityManager)
         {
             if (!entityManager.TryGetComponent(uid, out ContainerManagerComponent? containerManager))
@@ -98,10 +100,13 @@ namespace Content.Server.Construction.Completions
 
             if (entityManager.TryGetComponent(machine, out MachineComponent? machineComp))
             {
-                constructionSystem.RefreshParts(machineComp);
+                constructionSystem.RefreshParts(machine, machineComp);
             }
 
-            entityManager.DeleteEntity(uid);
+            var entChangeEv = new ConstructionChangeEntityEvent(machine, uid);
+            entityManager.EventBus.RaiseLocalEvent(uid, entChangeEv);
+            entityManager.EventBus.RaiseLocalEvent(machine, entChangeEv, broadcast: true);
+            entityManager.QueueDeleteEntity(uid);
         }
     }
 }

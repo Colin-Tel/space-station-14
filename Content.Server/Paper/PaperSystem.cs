@@ -16,10 +16,12 @@ namespace Content.Server.Paper
 {
     public sealed class PaperSystem : EntitySystem
     {
-        [Dependency] private readonly TagSystem _tagSystem = default!;
-        [Dependency] private readonly PopupSystem _popupSystem = default!;
-        [Dependency] private readonly UserInterfaceSystem _uiSystem = default!;
         [Dependency] private readonly IAdminLogManager _adminLogger = default!;
+        [Dependency] private readonly SharedAppearanceSystem _appearance = default!;
+        [Dependency] private readonly SharedInteractionSystem _interaction = default!;
+        [Dependency] private readonly PopupSystem _popupSystem = default!;
+        [Dependency] private readonly TagSystem _tagSystem = default!;
+        [Dependency] private readonly UserInterfaceSystem _uiSystem = default!;
 
         public override void Initialize()
         {
@@ -30,6 +32,18 @@ namespace Content.Server.Paper
             SubscribeLocalEvent<PaperComponent, ExaminedEvent>(OnExamined);
             SubscribeLocalEvent<PaperComponent, InteractUsingEvent>(OnInteractUsing);
             SubscribeLocalEvent<PaperComponent, PaperInputTextMessage>(OnInputTextMessage);
+
+            SubscribeLocalEvent<ActivateOnPaperOpenedComponent, PaperWriteEvent>(OnPaperWrite);
+
+            SubscribeLocalEvent<PaperComponent, MapInitEvent>(OnMapInit);
+        }
+
+        private void OnMapInit(EntityUid uid, PaperComponent paperComp, MapInitEvent args)
+        {
+            if (!string.IsNullOrEmpty(paperComp.Content))
+            {
+                paperComp.Content = Loc.GetString(paperComp.Content);
+            }
         }
 
         private void OnInit(EntityUid uid, PaperComponent paperComp, ComponentInit args)
@@ -40,10 +54,10 @@ namespace Content.Server.Paper
             if (TryComp<AppearanceComponent>(uid, out var appearance))
             {
                 if (paperComp.Content != "")
-                    appearance.SetData(PaperVisuals.Status, PaperStatus.Written);
+                    _appearance.SetData(uid, PaperVisuals.Status, PaperStatus.Written, appearance);
 
                 if (paperComp.StampState != null)
-                    appearance.SetData(PaperVisuals.Stamp, paperComp.StampState);
+                    _appearance.SetData(uid, PaperVisuals.Stamp, paperComp.StampState, appearance);
             }
 
         }
@@ -60,7 +74,7 @@ namespace Content.Server.Paper
                 return;
 
             if (paperComp.Content != "")
-                args.Message.AddMarkup(
+                args.PushMarkup(
                     Loc.GetString(
                         "paper-component-examine-detail-has-words", ("paper", uid)
                     )
@@ -68,9 +82,8 @@ namespace Content.Server.Paper
 
             if (paperComp.StampedBy.Count > 0)
             {
-                args.Message.PushNewline();
                 string commaSeparated = string.Join(", ", paperComp.StampedBy);
-                args.Message.AddMarkup(
+                args.PushMarkup(
                     Loc.GetString(
                         "paper-component-examine-detail-stamped-by", ("paper", uid), ("stamps", commaSeparated))
                 );
@@ -79,8 +92,10 @@ namespace Content.Server.Paper
 
         private void OnInteractUsing(EntityUid uid, PaperComponent paperComp, InteractUsingEvent args)
         {
-            if (_tagSystem.HasTag(args.Used, "Write"))
+            if (_tagSystem.HasTag(args.Used, "Write") && paperComp.StampedBy.Count == 0)
             {
+                var writeEvent = new PaperWriteEvent(uid, args.User);
+                RaiseLocalEvent(args.Used, ref writeEvent);
                 if (!TryComp<ActorComponent>(args.User, out var actor))
                     return;
 
@@ -98,6 +113,8 @@ namespace Content.Server.Paper
                     _popupSystem.PopupEntity(stampPaperOtherMessage, args.User, Filter.PvsExcept(args.User, entityManager: EntityManager), true);
                 var stampPaperSelfMessage = Loc.GetString("paper-component-action-stamp-paper-self", ("target", Identity.Entity(args.Target, EntityManager)),("stamp", args.Used));
                     _popupSystem.PopupEntity(stampPaperSelfMessage, args.User, args.User);
+
+                UpdateUserInterface(uid, paperComp);
             }
         }
 
@@ -109,10 +126,10 @@ namespace Content.Server.Paper
             var text = FormattedMessage.EscapeText(args.Text);
 
             if (text.Length + paperComp.Content.Length <= paperComp.ContentSize)
-                paperComp.Content += text + '\n';
+                paperComp.Content = text;
 
             if (TryComp<AppearanceComponent>(uid, out var appearance))
-                appearance.SetData(PaperVisuals.Status, PaperStatus.Written);
+                _appearance.SetData(uid, PaperVisuals.Status, PaperStatus.Written, appearance);
 
             if (TryComp<MetaDataComponent>(uid, out var meta))
                 meta.EntityDescription = "";
@@ -121,7 +138,13 @@ namespace Content.Server.Paper
                 _adminLogger.Add(LogType.Chat, LogImpact.Low,
                     $"{ToPrettyString(args.Session.AttachedEntity.Value):player} has written on {ToPrettyString(uid):entity} the following text: {args.Text}");
 
+            paperComp.Mode = PaperAction.Read;
             UpdateUserInterface(uid, paperComp);
+        }
+
+        private void OnPaperWrite(EntityUid uid, ActivateOnPaperOpenedComponent comp, ref PaperWriteEvent args)
+        {
+            _interaction.UseInHandInteraction(args.User, uid);
         }
 
         /// <summary>
@@ -138,7 +161,7 @@ namespace Content.Server.Paper
                 if (paperComp.StampState == null && TryComp<AppearanceComponent>(uid, out var appearance))
                 {
                     paperComp.StampState = stampState;
-                    appearance.SetData(PaperVisuals.Stamp, paperComp.StampState);
+                    _appearance.SetData(uid, PaperVisuals.Stamp, paperComp.StampState, appearance);
                 }
             }
             return true;
@@ -159,7 +182,7 @@ namespace Content.Server.Paper
                 ? PaperStatus.Blank
                 : PaperStatus.Written;
 
-            appearance.SetData(PaperVisuals.Status, status);
+            _appearance.SetData(uid, PaperVisuals.Status, status, appearance);
         }
 
         public void UpdateUserInterface(EntityUid uid, PaperComponent? paperComp = null)
@@ -167,7 +190,13 @@ namespace Content.Server.Paper
             if (!Resolve(uid, ref paperComp))
                 return;
 
-            _uiSystem.GetUiOrNull(uid, PaperUiKey.Key)?.SetState(new PaperBoundUserInterfaceState(paperComp.Content, paperComp.Mode));
+            _uiSystem.GetUiOrNull(uid, PaperUiKey.Key)?.SetState(new PaperBoundUserInterfaceState(paperComp.Content, paperComp.StampedBy, paperComp.Mode));
         }
     }
+
+    /// <summary>
+    /// Event fired when using a pen on paper, opening the UI.
+    /// </summary>
+    [ByRefEvent]
+    public record struct PaperWriteEvent(EntityUid User, EntityUid Paper);
 }

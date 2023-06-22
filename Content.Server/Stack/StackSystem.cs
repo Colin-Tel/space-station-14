@@ -1,9 +1,11 @@
+using Content.Server.Storage.Components;
+using Content.Server.Storage.EntitySystems;
 using Content.Shared.Popups;
 using Content.Shared.Stacks;
 using Content.Shared.Verbs;
 using JetBrains.Annotations;
+using Robust.Server.Containers;
 using Robust.Shared.Map;
-using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 
 namespace Content.Server.Stack
@@ -15,6 +17,8 @@ namespace Content.Server.Stack
     [UsedImplicitly]
     public sealed class StackSystem : SharedStackSystem
     {
+        [Dependency] private readonly ContainerSystem _container = default!;
+        [Dependency] private readonly StorageSystem _storage = default!;
         [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
         public static readonly int[] DefaultSplitAmounts = { 1, 5, 10, 20, 30, 50 };
@@ -87,7 +91,7 @@ namespace Content.Server.Stack
         }
 
         /// <summary>
-        ///     Say you want to spawn 97 stacks of something that has a max stack count of 30.
+        ///     Say you want to spawn 97 units of something that has a max stack count of 30.
         ///     This would spawn 3 stacks of 30 and 1 stack of 7.
         /// </summary>
         public List<EntityUid> SpawnMultiple(string entityPrototype, int amount, EntityCoordinates spawnPosition)
@@ -160,6 +164,12 @@ namespace Content.Server.Stack
 
             if (Split(uid, amount, userTransform.Coordinates, stack) is not {} split)
                 return;
+
+            if (_container.TryGetContainingContainer(uid, out var container) &&
+                TryComp<ServerStorageComponent>(container.Owner, out var storage))
+            {
+                _storage.UpdateStorageUI(container.Owner, storage);
+            }
 
             HandsSystem.PickupOrDrop(userUid, split);
 

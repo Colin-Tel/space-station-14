@@ -1,4 +1,5 @@
 using Content.Shared.Lathe;
+using Content.Shared.Research.Components;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects;
 
@@ -22,21 +23,20 @@ namespace Content.Client.Lathe.UI
             base.Open();
 
             _menu = new LatheMenu(this);
-            _queueMenu = new LatheQueueMenu(this);
+            _queueMenu = new LatheQueueMenu();
 
             _menu.OnClose += Close;
 
             _menu.OnQueueButtonPressed += _ =>
             {
-                _queueMenu.OpenCenteredLeft();
+                if (_queueMenu.IsOpen)
+                    _queueMenu.Close();
+                else
+                    _queueMenu.OpenCenteredLeft();
             };
             _menu.OnServerListButtonPressed += _ =>
             {
-                SendMessage(new LatheServerSelectionMessage());
-            };
-            _menu.OnServerSyncButtonPressed += _ =>
-            {
-                SendMessage(new LatheServerSyncMessage());
+                SendMessage(new ConsoleServerSelectionMessage());
             };
             _menu.RecipeQueueAction += (recipe, amount) =>
             {
@@ -55,7 +55,7 @@ namespace Content.Client.Lathe.UI
                 case LatheUpdateState msg:
                     if (_menu != null)
                         _menu.Recipes = msg.Recipes;
-                    _menu?.PopulateRecipes(Owner.Owner);
+                    _menu?.PopulateRecipes(Lathe);
                     _menu?.PopulateMaterials(Lathe);
                     _queueMenu?.PopulateList(msg.Queue);
                     _queueMenu?.SetInfo(msg.CurrentlyProducing);
