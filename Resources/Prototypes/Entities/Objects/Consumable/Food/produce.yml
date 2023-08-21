@@ -8,6 +8,9 @@
   - type: SolutionContainerManager
   - type: Sprite
     state: produce
+  # let cows eat raw produce like wheat and oats
+  - type: Food
+    requiredStomachs: 2
   - type: Produce
   - type: PotencyVisuals
   - type: Appearance
@@ -231,25 +234,6 @@
     launchForwardsMultiplier: 2
 
 - type: entity
-  name: banana peel
-  suffix: Explosive
-  parent: TrashBananaPeel
-  id: TrashBananaPeelExplosive
-  components:
-    - type: Sprite
-      sprite: Objects/Specific/Hydroponics/banana.rsi
-      state: primed
-    - type: TriggerOnSlip
-    - type: ExplodeOnTrigger
-    - type: Explosive
-      explosionType: Default
-      maxIntensity: 2
-      totalIntensity: 10
-      canCreateVacuum: false
-    - type: DeleteOnTrigger
-    - type: AnimationPlayer
-
-- type: entity
   name: carrot
   parent: FoodProduceBase
   id: FoodCarrot
@@ -355,6 +339,9 @@
       reagents:
       - ReagentId: JuiceLemon
         Quantity: 10
+  - type: Tag
+    tags:
+    - Lemon
 
 - type: entity
   name: lime
@@ -374,6 +361,9 @@
       reagents:
       - ReagentId: JuiceLime
         Quantity: 10
+  - type: Tag
+    tags:
+    - Lime
 
 - type: entity
   name: orange
@@ -568,6 +558,36 @@
         Quantity: 10
 
 - type: entity
+  name: cocoa pod
+  parent: FoodProduceBase
+  id: FoodCocoaPod
+  description: You can never have too much chocolate!
+  components:
+  - type: FlavorProfile
+    flavors:
+      - chocolate
+  - type: SolutionContainerManager
+    solutions:
+      food:
+        maxVol: 14
+        reagents:
+        - ReagentId: Nutriment
+          Quantity: 2
+        - ReagentId: Vitamin
+          Quantity: 1
+        - ReagentId: CocoaPowder
+          Quantity: 1
+  - type: Sprite
+    sprite: Objects/Specific/Hydroponics/cocoa.rsi
+  - type: Produce
+    seedId: cocoa
+  - type: SpawnItemsOnUse
+    items:
+      - id: FoodCocoaBeans
+    sound:
+      path: /Audio/Effects/packetrip.ogg
+
+- type: entity
   name: ear of corn
   parent: FoodProduceBase
   id: FoodCorn
@@ -587,6 +607,9 @@
           Quantity: 15
         - ReagentId: Nutriment
           Quantity: 5
+  - type: Tag
+    tags:
+    - Corn
   - type: Sprite
     sprite: Objects/Specific/Hydroponics/corn.rsi
   - type: Produce
@@ -817,7 +840,7 @@
         reagents:
         - ReagentId: Aloe
           Quantity: 10
-        - ReagentId: Kelotane
+        - ReagentId: Dermaline
           Quantity: 10
   - type: Sprite
     sprite: Objects/Specific/Hydroponics/aloe.rsi
@@ -852,7 +875,7 @@
     grindableSolutionName: food
   - type: Tag
     tags:
-    - Flower
+    - Flower # TODO add "RedFlower" or "Poppy" tag, when other color flowers will be
 
 - type: entity
   name: lingzhi
@@ -915,6 +938,9 @@
     sprite: Objects/Specific/Hydroponics/ambrosia_vulgaris.rsi
     slots:
     - HEAD
+  - type: Tag
+    tags:
+    - Ambrosia
 
 - type: entity
   name: galaxythistle
@@ -938,6 +964,9 @@
     seedId: galaxythistle
   - type: Extractable
     grindableSolutionName: food
+  - type: Tag
+    tags:
+    - Galaxythistle
 
 - type: entity
   name: fly amanita
@@ -963,6 +992,7 @@
     seedId: flyAmanita
   - type: Extractable
     grindableSolutionName: food
+  - type: BadFood
 
 - type: entity
   name: gatfruit
