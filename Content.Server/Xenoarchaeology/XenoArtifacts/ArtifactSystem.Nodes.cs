@@ -44,10 +44,10 @@ public sealed partial class ArtifactSystem
 
     private int GetValidNodeId()
     {
-        var id = _random.Next(10000, 100000);
+        var id = _random.Next(100, 1000);
         while (_usedNodeIds.Contains(id))
         {
-            id = _random.Next(10000, 100000);
+            id = _random.Next(100, 1000);
         }
 
         _usedNodeIds.Add(id);
@@ -199,8 +199,8 @@ public sealed partial class ArtifactSystem
 
             var temp = (object) comp;
             _serialization.CopyTo(entry.Component, ref temp);
-
-            EntityManager.AddComponent(uid, (Component) temp!, true);
+            EntityManager.RemoveComponent(uid, temp!.GetType());
+            EntityManager.AddComponent(uid, (Component) temp!);
         }
 
         node.Discovered = true;
@@ -234,7 +234,8 @@ public sealed partial class ArtifactSystem
                 comp.Owner = uid;
                 var temp = (object) comp;
                 _serialization.CopyTo(entry, ref temp);
-                EntityManager.AddComponent(uid, (Component) temp!, true);
+                EntityManager.RemoveComponent(uid, temp!.GetType());
+                EntityManager.AddComponent(uid, (Component) temp);
                 continue;
             }
 
